@@ -2,19 +2,23 @@ package server
 
 import (
 	"context"
-	"fmt"
 	tracingclient "github.com/cloudevents/sdk-go/observability/opencensus/v2/client"
 	obshttp "github.com/cloudevents/sdk-go/observability/opencensus/v2/http"
 	"github.com/cloudevents/sdk-go/v2/client"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/cloudevents/sdk-go/v2/protocol"
-	"github.com/go-redis/redis/v8"
+	client3 "github.com/jdextraze/go-gesclient/client"
 	"github.com/kok-stack/event-gateway/pkg/config"
+	uuid "github.com/satori/go.uuid"
+	"log"
+	"strconv"
 )
 
-var dbClient *redis.Client
+const versionKey = "version"
 
-func StartServer(ctx context.Context, config *config.ApplicationConfig, dc *redis.Client) error {
+var dbClient client3.Connection
+
+func StartServer(ctx context.Context, config *config.ApplicationConfig, dc client3.Connection) error {
 	dbClient = dc
 	p, err := obshttp.NewObservedHTTP()
 	if err != nil {
@@ -35,16 +39,31 @@ func StartServer(ctx context.Context, config *config.ApplicationConfig, dc *redi
 }
 
 func handler(ctx context.Context, e event.Event) protocol.Result {
-	fmt.Println(e.String())
-	add := dbClient.PFAdd(ctx, e.Type(), e.ID())
-	result, err := add.Result()
+	log.Printf("-> \n %+v", e.String())
+
+	v4, _ := uuid.NewV4()
+	evt := client3.NewEventData(v4, e.Type(), true, e.Data(), nil)
+	var err error
+	val, err := strconv.Atoi(e.ID())
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return protocol.NewReceipt(false, "convert id to version error: %v", err)
 	}
-	if result <= 0 {
-		return protocol.NewReceipt(false, "event %s id:%s exists", e.Type(), e.ID())
+	if val <= 0 {
+		val = client3.ExpectedVersion_Any
 	}
 
-	return nil
+	log.Printf("-> '%s': %+v", "test", evt)
+
+	task, err := dbClient.AppendToStreamAsync(e.Subject(), val, []*client3.EventData{evt}, nil)
+	if err != nil {
+		log.Printf("Error occured while appending to stream: %v", err)
+		return protocol.NewReceipt(false, "Error occured while appending to stream: %v", err)
+	} else if err := task.Error(); err != nil {
+		log.Printf("Error occured while waiting for result of appending to stream: %v", err)
+		return protocol.NewReceipt(false, "Error occured while waiting for result of appending to stream: %v", err)
+	} else {
+		result := task.Result().(*client3.WriteResult)
+		log.Printf("<- %+v", result)
+	}
+	return protocol.ResultACK
 }

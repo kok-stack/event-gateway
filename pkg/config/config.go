@@ -1,13 +1,15 @@
 package config
 
-type ApplicationConfig struct {
-	Test  string
-	A     map[string]string
-	Redis RedisConfig
+type EventStoreConfig struct {
+	Debug         bool
+	Endpoint      string
+	SslHost       string
+	SslSkipVerify bool
+	Verbose       bool
 }
 
-type RedisConfig struct {
-	Addr     string
-	Password string
-	DB       int
+type ApplicationConfig struct {
+	Test       string
+	A          map[string]string
+	EventStore EventStoreConfig
 }

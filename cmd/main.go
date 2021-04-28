@@ -31,16 +31,26 @@ func NewCommand() (*cobra.Command, context.Context, context.CancelFunc) {
 			return err
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("%+v", config)
-			//连接redis
-			conn := db.Conn(config)
-			//启动cloudevents
-			err := server.StartServer(ctx, config, conn)
+			fmt.Printf("%+v \n", config)
+			config.EventStore = config2.EventStoreConfig{
+				Debug:         true,
+				Endpoint:      "tcp://admin:changeit@127.0.0.1:1113",
+				SslHost:       "",
+				SslSkipVerify: false,
+				Verbose:       false,
+			}
+
+			conn, err := db.ConnTCP(config)
 			if err != nil {
 				return err
 			}
-			//server.StartServer(ctx, config, nil)
-			//
+
+			//启动cloudevents
+			err = server.StartServer(ctx, config, conn)
+			if err != nil {
+				return err
+			}
+
 			<-ctx.Done()
 			return nil
 		},

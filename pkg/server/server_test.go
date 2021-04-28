@@ -21,22 +21,25 @@ func TestSender(t *testing.T) {
 	if err != nil {
 		log.Fatalf("failed to create client, %v", err)
 	}
+	for i := -1; i < 5; i++ {
+		e := cloudevents.NewEvent()
+		e.SetID(fmt.Sprintf("%v", i))
+		e.SetType("greeting")
+		e.SetSource("test")
+		e.SetSubject("test")
+		_ = e.SetData(cloudevents.ApplicationJSON, map[string]interface{}{
+			"message": fmt.Sprintf("Hello, World!  index:%v", i),
+		})
 
-	e := cloudevents.NewEvent()
-	e.SetID("1")
-	e.SetType("greeting")
-	e.SetSource("test")
-	_ = e.SetData(cloudevents.ApplicationJSON, map[string]interface{}{
-		"message": "Hello, World!",
-	})
-
-	res := c.Send(ctx, e)
-	if cloudevents.IsUndelivered(res) {
-		log.Printf("Failed to send: %v", res)
-	} else {
-		var httpResult *cehttp.Result
-		cloudevents.ResultAs(res, &httpResult)
-		log.Printf("%+v", httpResult)
+		res := c.Send(ctx, e)
+		if cloudevents.IsUndelivered(res) {
+			log.Printf("Failed to send: %v", res)
+		} else {
+			var httpResult *cehttp.Result
+			cloudevents.ResultAs(res, &httpResult)
+			log.Printf("%+v", httpResult)
+		}
+		fmt.Println(res, cloudevents.IsNACK(res))
 	}
-	fmt.Println(res, cloudevents.IsNACK(res))
+
 }
