@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/kok-stack/event-gateway/pkg/bridge"
 	config2 "github.com/kok-stack/event-gateway/pkg/config"
 	"github.com/kok-stack/event-gateway/pkg/db"
 	"github.com/kok-stack/event-gateway/pkg/server"
@@ -45,9 +46,12 @@ func NewCommand() (*cobra.Command, context.Context, context.CancelFunc) {
 				return err
 			}
 
+			if err = bridge.StartBridge(ctx, conn, config); err != nil {
+				return err
+			}
+
 			//启动cloudevents
-			err = server.StartServer(ctx, config, conn)
-			if err != nil {
+			if err = server.StartServer(ctx, config, conn); err != nil {
 				return err
 			}
 

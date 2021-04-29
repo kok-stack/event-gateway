@@ -8,8 +8,14 @@ type EventStoreConfig struct {
 	Verbose       bool
 }
 
+type BridgeConfig struct {
+	StreamName string
+	Group      string
+}
+
 type ApplicationConfig struct {
 	Test       string
 	A          map[string]string
 	EventStore EventStoreConfig
+	Bridge     BridgeConfig
 }

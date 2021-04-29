@@ -14,8 +14,6 @@ import (
 	"strconv"
 )
 
-const versionKey = "version"
-
 var dbClient client3.Connection
 
 func StartServer(ctx context.Context, config *config.ApplicationConfig, dc client3.Connection) error {
